@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Cricket Players</title>
+<link rel="stylesheet" href="style.css">
+<script type="module" src="firebase.js"></script>
+</head>
+<body>
+
+<h1>Cricket Player Submission</h1>
+
+<form id="playerForm">
+  <input type="text" id="name" placeholder="Player Name (max 15 chars)" maxlength="15" required><br>
+  <input type="number" id="age" placeholder="Age" required><br>
+  <select id="tshirt">
+    <option>S</option><option>M</option><option>L</option><option>XL</option>
+    <option>XXL</option><option>XXXL</option>
+  </select><br>
+  <input type="number" id="jersey" placeholder="Jersey Number" required><br>
+  <select id="role">
+    <option>Batsman</option><option>Bowler</option><option>Allrounder</option>
+  </select><br>
+  <input type="file" id="photo" accept="image/*" required><br>
+  <button type="submit">Submit Player</button>
+</form>
+
+<h1>All Players</h1>
+<div class="container" id="playerContainer"></div>
+
+<script type="module">
+import { db, storage } from './firebase.js';
+import { collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js";
+
+const form = document.getElementById('playerForm');
+const container = document.getElementById('playerContainer');
+
+async function displayPlayers() {
+  container.innerHTML = '';
+  const snapshot = await getDocs(collection(db, "players"));
+  snapshot.forEach(doc => {
+    const p = doc.data();
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <img src="${p.photoURL}" alt="${p.name}">
+      <h2>${p.name}</h2>
+      <p>Age: ${p.age}</p>
+      <p>Tshirt: ${p.tshirt}</p>
+      <p>Jersey No: ${p.jersey}</p>
+      <p>Role: ${p.role}</p>
+    `;
+    container.appendChild(card);
+  });
+}
+
+form.addEventListener('submit', async e => {
+  e.preventDefault();
+  const name = document.getElementById('name').value;
+  const age = document.getElementById('age').value;
+  const tshirt = document.getElementById('tshirt').value;
+  const jersey = document.getElementById('jersey').value;
+  const role = document.getElementById('role').value;
+  const photoFile = document.getElementById('photo').files[0];
+
+  if (!photoFile) return alert("Please upload a photo");
+
+  const storageRef = ref(storage, `player_photos/${photoFile.name}`);
+  await uploadBytes(storageRef, photoFile);
+  const photoURL = await getDownloadURL(storageRef);
+
+  await addDoc(collection(db, "players"), { name, age, tshirt, jersey, role, photoURL });
+
+  displayPlayers();
+  form.reset();
+});
+
+displayPlayers();
+</script>
+
+</body>
+</html>
